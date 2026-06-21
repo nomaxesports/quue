@@ -553,6 +553,37 @@ nav.scrolled { background: rgba(3,13,12,0.95); }
 .msg-send:hover { background:var(--bright); }
 .msg-copy h2 { margin-bottom:16px; }
 .msg-feature-list { display:flex; flex-direction:column; gap:12px; margin-top:24px; }
+
+/* Locked / empty state for messaging panel — shown when logged out
+   or when the user has zero real connections yet. */
+.msg-locked {
+  background:var(--card); border:1px solid var(--border2);
+  border-radius:20px; padding:48px 32px; text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:16px;
+  min-height:340px; justify-content:center;
+}
+.msg-locked-icon {
+  width:56px; height:56px; border-radius:50%;
+  background:rgba(0,196,179,0.1); border:1px solid var(--border2);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; color:var(--teal); font-weight:800;
+}
+.msg-locked h4 { font-family:Georgia,'Times New Roman',serif; font-size:18px; font-weight:700; }
+.msg-locked p { font-size:13px; color:var(--sub); max-width:280px; line-height:1.6; }
+
+/* Connection list shown when logged in but no conversation selected yet */
+.conn-list-wrap {
+  background:var(--card); border:1px solid var(--border2);
+  border-radius:20px; overflow:hidden; min-height:340px;
+}
+.conn-list-header { padding:16px 20px; border-bottom:1px solid var(--border); font-size:13px; font-weight:600; color:var(--sub); }
+.conn-list-empty { padding:48px 24px; text-align:center; color:var(--sub); font-size:13px; }
+.conn-list-item {
+  display:flex; align-items:center; gap:12px; padding:14px 20px;
+  border-bottom:1px solid var(--border); cursor:pointer; transition:background .2s;
+}
+.conn-list-item:hover { background:rgba(0,196,179,0.04); }
+.conn-list-item:last-child { border-bottom:none; }
 .mfl-item { display:flex; gap:12px; }
 .mfl-icon { color:var(--teal); font-size:16px; font-weight:800; flex-shrink:0; margin-top:2px; }
 .mfl-text { font-size:14px; color:var(--sub); line-height:1.5; }
@@ -903,7 +934,7 @@ footer { background: var(--deep); border-top: 1px solid var(--border); padding: 
     <a onclick="scrollToId('pricing')">Pricing</a>
     <a onclick="scrollToId('platform')">How it works</a>
   </div>
-  <div class="nav-right">
+  <div class="nav-right" id="navRight">
     <button class="btn-ghost" onclick="openModal('login')">Sign in</button>
     <button class="btn-cta" onclick="openModal('register')">Play free →</button>
   </div>
@@ -1280,38 +1311,8 @@ footer { background: var(--deep); border-top: 1px solid var(--border); padding: 
 <section class="section msg-section" id="messaging">
   <div class="section-inner">
     <div class="msg-layout">
-      <div class="msg-panel">
-        <div class="msg-topbar">
-          <div class="msg-online-dot"></div>
-          <div class="msg-tb-av" style="background:rgba(0,196,179,0.2);color:#00C4B3;" id="msgTbAv">ZK</div>
-          <div>
-            <div class="msg-tb-name" id="msgTbName">ZeroKelvin</div>
-            <div class="msg-tb-status" id="msgTbStatus">Online · 97% match</div>
-          </div>
-          <div class="msg-tb-badge" id="msgTbBadge">97% match</div>
-        </div>
-        <div class="msg-body" id="msgBody">
-          <div class="bubble-wrap from-them">
-            <div class="bubble">Hey, ready for ranked? I'm Global Elite, play entry mostly</div>
-            <div class="bubble-time">8:14 PM</div>
-          </div>
-          <div class="bubble-wrap from-me">
-            <div class="bubble">Yeah, on from 9. Let's run it</div>
-            <div class="bubble-time">8:17 PM</div>
-          </div>
-          <div class="bubble-wrap from-them">
-            <div class="bubble">Mic on Discord or in-game?</div>
-            <div class="bubble-time">8:18 PM</div>
-          </div>
-          <div class="bubble-wrap from-me">
-            <div class="bubble">Discord. Sending invite now</div>
-            <div class="bubble-time">8:19 PM</div>
-          </div>
-        </div>
-        <div class="msg-input-row">
-          <input class="msg-input" id="msgInput" placeholder="Type a message…" onkeydown="if(event.key==='Enter')sendMsg()">
-          <button class="msg-send" onclick="sendMsg()">Send</button>
-        </div>
+      <div id="msgPanelWrap">
+        <!-- Replaced by renderMessagingPanel() based on login + real connections -->
       </div>
       <div class="msg-copy">
         <div class="eyebrow-sm">Secure messaging</div>
@@ -1327,6 +1328,7 @@ footer { background: var(--deep); border-top: 1px solid var(--border); padding: 
     </div>
   </div>
 </section>
+
 
 <!-- ═══ ONBOARDING ═══ -->
 <section class="section onboard-section" id="platform">
@@ -1856,6 +1858,24 @@ function sendMsg(){
 }
 
 /* ── ONBOARDING — exact supported game list ── */
+/* Rank tiers per game — used to render Step 3 dynamically based on
+   whichever games the user actually picked in Step 2. */
+const GAME_RANKS = {
+  'Fortnite':        ['Bronze','Silver','Gold','Platinum','Diamond','Elite','Champion','Unreal'],
+  'Rust':             ['Scrap','Sheet Metal','Garage Door','Armored','Heavy Plate','Roadsign','Tempered','Nexus'],
+  'GTA':              ['Street Rat','Hustler','Made Guy','Capo','Underboss','Boss','Kingpin','Legend'],
+  'Roblox':           ['Newcomer','Builder','Scripter','Veteran','Elite','Master','Grandmaster','Icon'],
+  'Minecraft':        ['Stone','Iron','Gold','Diamond','Emerald','Netherite','Ender','Dragon'],
+  'Counter-Strike':   ['Silver','Gold Nova','MG','DMG','LE','LEM','SMFC','Global'],
+  'Dota 2':           ['Herald','Guardian','Crusader','Archon','Legend','Ancient','Divine','Immortal'],
+  'NBA 2K':           ['Rookie','Pro','All-Star','Superstar','Elite','Legend','Hall of Fame','Galaxy Opal'],
+  'FC':               ['Bronze','Silver','Gold','Elite','Contender','Champion','Icon','Legend'],
+  'Marvel Rivals':    ['Bronze','Silver','Gold','Platinum','Diamond','Grandmaster','Celestial','Eternity'],
+  'Rocket League':    ['Bronze','Silver','Gold','Platinum','Diamond','Champion','Grand Champion','SSL'],
+};
+let selectedGames = ['Counter-Strike']; // default until Step 2 changes it
+let selectedRanks = {}; // { 'Counter-Strike': 'Global', 'Fortnite': 'Diamond', ... }
+
 const obData=[
   {render:()=>`
     <div class="fp-label">Where do you play?</div>
@@ -1870,21 +1890,12 @@ const obData=[
   `},
   {render:()=>`
     <div class="fp-label">Games you actively play</div>
-    <div class="chip-group">
-      ${['Fortnite','Rust','GTA','Roblox','Minecraft','Counter-Strike','Dota 2','NBA 2K','FC','Marvel Rivals','Rocket League'].map((g,i)=>`<div class="chip${i===5?' sel':''}" onclick="this.classList.toggle('sel')">${g}</div>`).join('')}
+    <div class="chip-group" id="obGames">
+      ${Object.keys(GAME_RANKS).map((g,i)=>`<div class="chip${selectedGames.includes(g)?' sel':''}" onclick="toggleGame(this,'${g}')">${g}</div>`).join('')}
     </div>
-    <button class="fp-next" onclick="setStep(2)">Next →</button>
+    <button class="fp-next" onclick="goToRankStep()">Next →</button>
   `},
-  {render:()=>`
-    <div class="fp-label">Your rank (Counter-Strike)</div>
-    <div class="rank-grid">
-      ${['Silver','Gold Nova','MG','DMG','LE','LEM','SMFC','Global'].map((r,i)=>`
-        <div class="rank-card${i===7?' sel':''}" onclick="selRank(this)">
-          <div class="rank-icon">${r.slice(0,2).toUpperCase()}</div>${r}
-        </div>`).join('')}
-    </div>
-    <button class="fp-next" onclick="setStep(3)">Next →</button>
-  `},
+  {render:()=>renderRankStep()},
   {render:()=>`
     <div class="fp-label">Attitude</div>
     <div class="chip-group" id="obAtt">
@@ -1897,6 +1908,44 @@ const obData=[
     <button class="fp-next" onclick="finishOnboard()">Find my matches →</button>
   `},
 ];
+
+/* Toggle a game on/off in Step 2. Keeps selectedGames in sync, and if a
+   game gets deselected, clear any rank that was picked for it. */
+function toggleGame(el, game){
+  el.classList.toggle('sel');
+  if (el.classList.contains('sel')) {
+    if (!selectedGames.includes(game)) selectedGames.push(game);
+  } else {
+    selectedGames = selectedGames.filter(g => g !== game);
+    delete selectedRanks[game];
+  }
+}
+
+/* Guards against moving to Step 3 with zero games picked. */
+function goToRankStep(){
+  if (selectedGames.length === 0) { showToast('Pick at least one game'); return; }
+  setStep(2);
+}
+
+/* Renders one rank-grid per selected game, so a player who picked
+   Fortnite + Rocket League sees both rank ladders, each correctly
+   labelled with that game's real tiers — not a hardcoded CS list. */
+function renderRankStep(){
+  return selectedGames.map(game => {
+    const ranks = GAME_RANKS[game] || GAME_RANKS['Counter-Strike'];
+    const current = selectedRanks[game] || ranks[Math.floor(ranks.length/2)];
+    if (!selectedRanks[game]) selectedRanks[game] = current;
+    return `
+      <div class="fp-label" style="margin-top:12px;">Your rank (${game})</div>
+      <div class="rank-grid">
+        ${ranks.map(r => `
+          <div class="rank-card${r===current?' sel':''}" onclick="selRank(this,'${game}','${r}')">
+            <div class="rank-icon">${r.slice(0,2).toUpperCase()}</div>${r}
+          </div>`).join('')}
+      </div>`;
+  }).join('') + `<button class="fp-next" onclick="setStep(3)">Next →</button>`;
+}
+
 function setStep(n){
   document.querySelectorAll('.ob-step').forEach((s,i)=>s.classList.toggle('active',i===n));
   document.getElementById('obPreview').innerHTML=obData[n].render();
@@ -1915,9 +1964,13 @@ function single(el,gid){
   document.querySelectorAll('#'+gid+' .chip').forEach(c=>c.classList.remove('sel'));
   el.classList.add('sel');
 }
-function selRank(el){
-  document.querySelectorAll('.rank-card').forEach(c=>c.classList.remove('sel'));
+function selRank(el, game, rank){
+  // Only clear selection within THIS game's rank grid, not every grid on
+  // the page — needed now that multi-game selection shows stacked grids.
+  const parentGrid = el.closest('.rank-grid');
+  parentGrid.querySelectorAll('.rank-card').forEach(c=>c.classList.remove('sel'));
   el.classList.add('sel');
+  selectedRanks[game] = rank;
 }
 
 /* ── INIT ── */
