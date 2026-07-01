@@ -1666,7 +1666,7 @@
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
         if (data) {
-          var u = data.user || data;
+          const u = data.user || data;
           session.user = Object.assign({}, session.user, u);
           saveSession();
           renderNavState();
@@ -1685,13 +1685,13 @@
 
   // ── NAV STATE ──
   function toggleMobileNav() {
-    var links = document.querySelector('.nav-links');
+    const links = document.querySelector('.nav-links');
     if (links) links.classList.toggle('open');
   }
 
   document.querySelectorAll('.nav-links a').forEach(function(a) {
     a.addEventListener('click', function() {
-      var links = document.querySelector('.nav-links');
+      const links = document.querySelector('.nav-links');
       if (links) links.classList.remove('open');
     });
   });
@@ -1723,7 +1723,7 @@
 
   // ── MESSAGING PANEL ──
   // No demo messages — only real conversations from matched players
-  var localMessages = {};
+  const localMessages = {};
 
   let activeContact = null;
 
@@ -1813,7 +1813,7 @@
   }
 
   function switchContact(el) {
-    var name = (typeof el === 'string') ? el : el.dataset.name;
+    const name = (typeof el === 'string') ? el : el.dataset.name;
     activeContact = name;
     renderMessagingPanel();
   }
@@ -1870,24 +1870,24 @@
     }
 
     // Use first selected game or default
-    var gameId = currentFilterGame || 'Counter-Strike';
+    const gameId = currentFilterGame || 'Counter-Strike';
 
     fetch(API_BASE + '/matchmaking/feed?gameId=' + encodeURIComponent(gameId) + '&limit=10', {
       headers: { 'Authorization': 'Bearer ' + session.token }
     })
       .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(data) {
-        var matches = (data && data.matches) ? data.matches : [];
+        const matches = (data && data.matches) ? data.matches : [];
         if (matches.length === 0) {
           feed.innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:20px 0;text-align:center">No players found for this game yet. Try a different game or invite friends!</div>';
           return;
         }
         feed.innerHTML = matches.map(function(m) {
-          var p = m.user;
-          var initials = sanitize(p.username || 'PL').slice(0,2).toUpperCase();
-          var rank = sanitize(p.rankTier || '');
-          var region = sanitize(p.region || '');
-          var compat = Math.round(m.compatScore) || 80;
+          const p = m.user;
+          const initials = sanitize(p.username || 'PL').slice(0,2).toUpperCase();
+          const rank = sanitize(p.rankTier || '');
+          const region = sanitize(p.region || '');
+          const compat = Math.round(m.compatScore) || 80;
           return '<div class="match-card">' +
             '<div class="match-avatar">' + initials + '</div>' +
             '<div class="match-info">' +
@@ -1917,7 +1917,7 @@
   }
 
   function connectPlayer(el) {
-    var userId, username, game;
+    let userId, username, game;
     if (el && el.dataset) {
       userId = el.dataset.id;
       username = el.dataset.name;
@@ -1939,8 +1939,8 @@
     })
     .then(function(r) { return r.ok ? r.json() : null; })
     .then(function(data) {
-      var isMutual = data && data.mutual;
-      var convId = data && data.match && data.match.conversationId;
+      const isMutual = data && data.mutual;
+      const convId = data && data.match && data.match.conversationId;
       if (!session.connections.find(function(c) { return c.userId === userId; })) {
         session.connections.push({
           userId: userId,
@@ -1971,12 +1971,12 @@
     document.getElementById('match-popup').classList.remove('show');
   }
 
-  var currentFilterGame = 'Counter-Strike';
+  let currentFilterGame = 'Counter-Strike';
 
   function setFilter(btn, filter) {
     document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
     btn.classList.add('active');
-    var gameMap = { 'all': 'Counter-Strike', 'cs': 'Counter-Strike', 'fn': 'Fortnite' };
+    const gameMap = { 'all': 'Counter-Strike', 'cs': 'Counter-Strike', 'fn': 'Fortnite' };
     currentFilterGame = gameMap[filter] || filter;
     renderMatchFeed();
   }
@@ -2264,8 +2264,8 @@
 
 
   // ── ONBOARDING MODAL ──
-  var mobGames = [];
-  var mobRanks = {};
+  let mobGames = [];
+  const mobRanks = {};
 
   function openOnboarding() {
     // Only show if profile not complete
@@ -2275,9 +2275,9 @@
   }
 
   function mobGoToStep(n) {
-    for (var i = 1; i <= 3; i++) {
-      var step = document.getElementById('mob-step' + i);
-      var dot = document.getElementById('mob-s' + i);
+    for (let i = 1; i <= 3; i++) {
+      const step = document.getElementById('mob-step' + i);
+      const dot = document.getElementById('mob-s' + i);
       if (step) step.classList.toggle('active', i === n);
       if (dot) {
         dot.classList.toggle('active', i === n);
@@ -2297,8 +2297,8 @@
 
   function mobNext(step) {
     if (step === 1) {
-      var age = document.getElementById('mob-age').value;
-      var region = document.getElementById('mob-region').value;
+      const age = document.getElementById('mob-age').value;
+      const region = document.getElementById('mob-region').value;
       if (!age || age < 13) { showToast('Please enter a valid age (13+)'); return; }
       if (!region) { showToast('Please select your region'); return; }
     }
@@ -2312,10 +2312,10 @@
   function mobPrev(step) { mobGoToStep(step - 1); }
 
   function buildMobRanks() {
-    var container = document.getElementById('mob-ranks-container');
+    const container = document.getElementById('mob-ranks-container');
     if (!container) return;
     container.innerHTML = mobGames.map(function(game) {
-      var ranks = RANKS[game] || [];
+      const ranks = RANKS[game] || [];
       return '<div class="rank-section">' +
         '<div class="rank-game-label">' + game + '</div>' +
         '<div class="rank-grid">' +
@@ -2339,16 +2339,16 @@
   }
 
   function saveOnboarding() {
-    var age = document.getElementById('mob-age') ? document.getElementById('mob-age').value : '';
-    var region = document.getElementById('mob-region') ? document.getElementById('mob-region').value : '';
-    var playstyle = document.getElementById('mob-playstyle') ? document.getElementById('mob-playstyle').value : 'competitive';
+    const age = document.getElementById('mob-age') ? document.getElementById('mob-age').value : '';
+    const region = document.getElementById('mob-region') ? document.getElementById('mob-region').value : '';
+    const playstyle = document.getElementById('mob-playstyle') ? document.getElementById('mob-playstyle').value : 'competitive';
 
     if (mobGames.length === 0) { showToast('Please select at least one game'); return; }
 
-    var btn = document.getElementById('mob-finish-btn');
+    const btn = document.getElementById('mob-finish-btn');
     if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
 
-    var gamesPayload = mobGames.map(function(g) {
+    const gamesPayload = mobGames.map(function(g) {
       return { game: g, rank: mobRanks[g] || '' };
     });
 
